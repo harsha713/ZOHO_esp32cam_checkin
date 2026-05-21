@@ -179,7 +179,7 @@ app.listen(PORT, HOST, () => {
   L.info('='.repeat(55));
   L.info('Zoho Kiosk Middleware + Dashboard');
   L.info(`  Dashboard  → http://192.168.1.150:${PORT}/`);
-  L.info(`  Dashboard  → http://100.109.145.93:${PORT}/ (via Tailscale)`);
+  L.info(`  Dashboard  → http://100.109.145.97:${PORT}/ (via Tailscale)`);
   L.info(`  Camera     → http://192.168.1.150:${PORT}/api/camera`);
   L.info(`  Events     → http://192.168.1.150:${PORT}/api/events`);
   L.info(`  CDP target → ${CDP_HOST}:${CDP_PORT}`);

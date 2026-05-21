@@ -29,9 +29,11 @@
 #define DNS_IP      "8.8.8.8"
 
 // ── Server Settings ───────────────────────────────────────────────────────────
-// The local IP address of your server (run `hostname -I` on the server)
-#define SERVER_IP   "192.168.1.100"
-#define SERVER_PORT 3001
+// The LOCAL network IP of your server (NOT the Tailscale IP).
+// Your server's local IP is 192.168.1.150
+// Your middleware port is 5003
+#define SERVER_IP   "192.168.1.150"
+#define SERVER_PORT 5003
 
 // ── Button GPIO Pins ──────────────────────────────────────────────────────────
 // Connect buttons BETWEEN these GPIO pins and GND.

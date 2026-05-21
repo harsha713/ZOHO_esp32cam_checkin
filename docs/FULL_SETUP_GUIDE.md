@@ -6,20 +6,20 @@
 
 ```
 [ESP32-CAM Box at Reception]          [HDMI Monitor at Reception]
-  📷 Streams video over WiFi             Shows Zoho Kiosk UI
-  🟢 CHECK IN button                     (Chrome browser, full screen)
-  🔴 CHECK OUT button
-         │ WiFi                                ║ HDMI cable
-         ▼                                     ║
-[Your Ubuntu 24.04 Server — 3 Docker Containers]
-  ├── zoho-kiosk        : Xvfb + Chrome + VNC
-  ├── zoho-camera-feed  : ffmpeg pipes ESP32 → /dev/video10
-  └── zoho-middleware   : Node.js — buttons→browser, dashboard, event log
-         │ HTTPS
-         ▼
+  Camera streams video over WiFi         Shows Zoho Kiosk UI
+  CHECK IN button (green)                (Chrome browser, full screen)
+  CHECK OUT button (red)
+         | WiFi                                | HDMI cable
+         v                                     |
+[Your Ubuntu 24.04 Server -- 3 Docker Containers]
+  |-- zoho-kiosk        : Xvfb + Chrome + VNC
+  |-- zoho-camera-feed  : ffmpeg pipes ESP32 -> /dev/video10
+  |-- zoho-middleware   : Node.js -- buttons->browser, dashboard, event log
+         | HTTPS
+         v
   [Zoho People Cloud]
 
-[Any LAN device] → http://192.168.1.150:5003 → Live Dashboard
+[Any LAN device] -> http://192.168.1.150:5003 -> Live Dashboard
 ```
 
 **Total cost:** ~₹400–700 (just buttons + enclosure + USB charger — ESP32-CAM you already have)
@@ -81,12 +81,12 @@ After upload: **remove the GPIO0→GND wire**, press the RESET button.
 
 ```
 FRONT:
-┌──────────────────────────┐
-│  👁  [Camera Lens]        │
-│                          │
-│  [ ✅  CHECK   IN  ]      │  ← green button
-│  [ 🔴  CHECK  OUT  ]      │  ← red button
-└──────────────────────────┘
++----------------------------+
+|  [Camera Lens]             |
+|                            |
+|  [ CHECK   IN  ]           |  <- green button
+|  [ CHECK  OUT  ]           |  <- red button
++----------------------------+
 BACK: USB power cable exits here
 ```
 
@@ -129,36 +129,44 @@ Even better used together with the firmware static IP. In your router:
 
 ## 4.1 Copy the Project to Your Server
 
-Your server is reachable via Tailscale at `100.109.145.93`.
+Your server is reachable via Tailscale at `100.109.145.97`.
 The project lives at `/mnt/Amma/ZOHO_smart_checkin` on your PC.
 
+**The SCP error you may see** (`No such file or directory`) happens because
+`/opt/zoho-kiosk` doesn't exist yet on the server. You must create it first.
+
+Run these commands in order — **on your PC**:
+
 ```bash
-# Run this on YOUR PC (not the server):
-scp -r /mnt/Amma/ZOHO_smart_checkin youruser@100.109.145.93:/opt/zoho-kiosk
+# Step 1 — Create the destination directory on the server:
+ssh slplserver@100.109.145.97 "sudo mkdir -p /opt/zoho-kiosk && sudo chown slplserver:slplserver /opt/zoho-kiosk"
+
+# Step 2 — Copy the project into it:
+scp -r /mnt/Amma/ZOHO_smart_checkin/. slplserver@100.109.145.97:/opt/zoho-kiosk/
 ```
 
-Replace `youruser` with your actual Linux username on the server
-(the same one you use when you `ssh youruser@100.109.145.93`).
+> **Note:** The `.` at the end of the source path (`ZOHO_smart_checkin/.`) means
+> "copy the *contents* of this folder", so files land directly in `/opt/zoho-kiosk/`
+> instead of creating a nested `/opt/zoho-kiosk/ZOHO_smart_checkin/`.
 
-Verify it landed on the server:
+Verify it landed correctly:
 ```bash
-ssh youruser@100.109.145.93
-ls /opt/zoho-kiosk
+ssh slplserver@100.109.145.97 "ls /opt/zoho-kiosk"
 # Should show: docker-compose.yml  .env.example  host-setup.sh  kiosk/  middleware/  ...
 ```
 
 After any code or config change on your PC, re-sync just the changed folder:
 ```bash
 # Re-sync only middleware (e.g. after editing config.json or dashboard.html):
-scp -r /mnt/Amma/ZOHO_smart_checkin/middleware youruser@100.109.145.93:/opt/zoho-kiosk/
+scp -r /mnt/Amma/ZOHO_smart_checkin/middleware/. slplserver@100.109.145.97:/opt/zoho-kiosk/middleware/
 
 # Re-sync the whole project:
-scp -r /mnt/Amma/ZOHO_smart_checkin/. youruser@100.109.145.93:/opt/zoho-kiosk/
+scp -r /mnt/Amma/ZOHO_smart_checkin/. slplserver@100.109.145.97:/opt/zoho-kiosk/
 ```
 
 Then on the server, rebuild the affected container:
 ```bash
-ssh youruser@100.109.145.93
+ssh slplserver@100.109.145.97
 cd /opt/zoho-kiosk
 docker compose up -d --build zoho-middleware   # or whichever changed
 ```
@@ -195,7 +203,7 @@ docker --version        # Docker version 24.x or higher
 docker compose version  # Docker Compose version v2.x
 ```
 
-> ⚠️ On Ubuntu 24.04, the command is `docker compose` (space), NOT `docker-compose` (hyphen). The old hyphen version is deprecated.
+> **Note:** On Ubuntu 24.04, the command is `docker compose` (space), NOT `docker-compose` (hyphen). The old hyphen version is deprecated.
 
 ## 4.3 Host Pre-Setup (Virtual Camera Kernel Module)
 
@@ -219,7 +227,7 @@ v4l2-ctl --list-devices
 # Should show: ZohoKioskCam (/dev/video10)
 ```
 
-> ⚠️ Log out and back in (or reboot) after this step for the `video` group to apply.
+> **Note:** Log out and back in (or reboot) after this step for the `video` group to apply.
 
 ## 4.4 Configure Your Settings
 
@@ -266,12 +274,12 @@ Check status:
 docker compose ps
 ```
 
-Expected output:
+Expected output (host networking mode -- no PORTS column):
 ```
 NAME                STATUS          PORTS
 zoho-camera-feed    Up
-zoho-kiosk          Up (healthy)    0.0.0.0:5900->5900/tcp
-zoho-middleware     Up (healthy)    0.0.0.0:5003->5003/tcp
+zoho-kiosk          Up (healthy)
+zoho-middleware     Up (healthy)
 ```
 
 View live logs:
@@ -295,9 +303,9 @@ Since you already have Portainer running, deploy as a Stack:
 5. Click **Deploy the stack**
 
 All 3 containers appear in Portainer's Containers view with:
-- 🟢 Health indicators
-- Live log streaming (Container → Logs tab)
-- CPU/RAM stats (Container → Stats tab)
+- Health indicators
+- Live log streaming (Container > Logs tab)
+- CPU/RAM stats (Container > Stats tab)
 - Restart button per container
 
 To update after config changes: **Stacks → zoho-kiosk → Editor → Update the stack**
@@ -390,11 +398,11 @@ Click **→ Upload**. When you see `Connecting......`, press and release the RES
 
 ## 7.1 Connect VNC to See the Kiosk
 
-1. Download [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/)
-2. Add connection: `192.168.1.150:5900`
-   (use the local IP here, not Tailscale — VNC needs low latency)
-3. No password
-4. You'll see Chrome with the Zoho Kiosk page
+1. Download [VNC Viewer](https://www.realvnc.com/en/connect/download/viewer/) or install `tigervnc` on Linux
+2. Connect to: `192.168.1.150:5900`
+   (use the local IP, not Tailscale -- VNC needs low latency)
+3. Password: `zoho1234` (set via `VNC_PASSWORD` in `.env`)
+4. You will see Chrome with the Zoho Kiosk page
 
 ## 7.2 Grant Camera Permission (one time only)
 
@@ -456,7 +464,7 @@ http://192.168.1.150:5003
 
 You can also reach it from outside your network via Tailscale:
 ```
-http://100.109.145.93:5003
+http://100.109.145.97:5003
 ```
 
 No app needed. Any browser works.

@@ -1,25 +1,16 @@
-# =============================================================================
-# Zoho Kiosk — Kiosk Browser Container
-# Base: Ubuntu 24.04
-# Contains: Xvfb, Google Chrome, x11vnc, fluxbox
-# =============================================================================
+# Zoho Kiosk -- Kiosk Browser Container
+# Ubuntu 24.04 + Xvfb + Google Chrome + x11vnc + fluxbox
 
 FROM ubuntu:24.04
 
-LABEL maintainer="zoho-kiosk"
-LABEL description="Headless Chromium kiosk browser with VNC access"
-
-# Avoid interactive prompts during apt installs
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Kolkata
 
-# ── System dependencies ───────────────────────────────────────────────────────
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Virtual display & window manager
     xvfb \
     fluxbox \
     x11vnc \
-    # Chrome dependencies
     wget \
     curl \
     gnupg \
@@ -51,12 +42,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxss1 \
     libxtst6 \
     xdg-utils \
-    # Utilities
     procps \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Install Google Chrome Stable ──────────────────────────────────────────────
-# (chromium-browser on Ubuntu 24.04 is a snap stub — doesn't work in Docker)
+# Google Chrome (snap chromium does not work in Docker)
 RUN wget -q -O /tmp/google-chrome.gpg https://dl.google.com/linux/linux_signing_key.pub \
     && gpg --dearmor < /tmp/google-chrome.gpg \
        > /usr/share/keyrings/google-chrome-keyring.gpg \
@@ -68,13 +57,9 @@ RUN wget -q -O /tmp/google-chrome.gpg https://dl.google.com/linux/linux_signing_
     && apt-get install -y --no-install-recommends google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-# ── Copy entrypoint ───────────────────────────────────────────────────────────
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# ── Ports ─────────────────────────────────────────────────────────────────────
-# 5900: VNC (remote viewing/management)
-# 9222: Chrome DevTools Protocol (internal — middleware talks to this)
 EXPOSE 5900 9222
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -2,7 +2,7 @@
   "_comment": "Edit this file to match your Zoho Kiosk setup",
 
   "server": {
-    "port": 3001,
+    "port": 5003,
     "host": "0.0.0.0"
   },
 
