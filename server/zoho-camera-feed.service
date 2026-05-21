@@ -1,0 +1,23 @@
+[Unit]
+Description=ESP32-CAM to Virtual Camera Feed (ffmpeg bridge)
+Documentation=https://github.com/your-org/zoho-kiosk
+After=network.target
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+Group=YOUR_USERNAME
+
+ExecStart=/bin/bash INSTALL_DIR/server/feed-camera.sh
+
+Restart=always
+RestartSec=5
+
+Environment=HOME=/home/YOUR_USERNAME
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zoho-camera-feed
+
+[Install]
+WantedBy=multi-user.target

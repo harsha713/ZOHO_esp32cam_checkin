@@ -1,0 +1,32 @@
+[Unit]
+Description=Zoho Kiosk Browser (Headless Chromium)
+Documentation=https://github.com/your-org/zoho-kiosk
+After=network.target zoho-camera-feed.service
+Wants=zoho-camera-feed.service
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+Group=YOUR_USERNAME
+
+# Path to the kiosk launcher script
+ExecStart=/bin/bash INSTALL_DIR/server/start-kiosk.sh
+
+# Always restart if it dies
+Restart=always
+RestartSec=10
+
+# Environment
+Environment=HOME=/home/YOUR_USERNAME
+Environment=DISPLAY=:99
+
+# Logging — view with: journalctl -u zoho-kiosk -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zoho-kiosk
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

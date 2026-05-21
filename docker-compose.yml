@@ -1,0 +1,124 @@
+# =============================================================================
+# ZOHO SMART KIOSK — Docker Compose Stack
+# Compatible with Portainer Stacks (just paste this file content there).
+#
+# BEFORE RUNNING:
+#   1. Run: bash host-setup.sh   (one-time, loads virtual camera kernel module)
+#   2. Copy .env.example → .env and fill in your values
+#   3. Run: docker compose up -d --build
+# =============================================================================
+
+name: zoho-kiosk
+
+# ── Shared Internal Network ────────────────────────────────────────────────────
+networks:
+  zoho-net:
+    driver: bridge
+    labels:
+      com.zoho-kiosk.description: "Internal network for Zoho Kiosk services"
+
+# ── Persistent Volumes ─────────────────────────────────────────────────────────
+volumes:
+  chrome-profile:
+    driver: local
+    labels:
+      com.zoho-kiosk.description: "Chrome user profile (saves camera permissions)"
+  events-log:
+    driver: local
+    labels:
+      com.zoho-kiosk.description: "Activity log JSON — persists across restarts"
+
+# ── Services ──────────────────────────────────────────────────────────────────
+services:
+
+  # ─── 1. Camera Feed Bridge ──────────────────────────────────────────────────
+  # Pulls MJPEG stream from the ESP32-CAM over WiFi and writes it into
+  # the host's virtual v4l2loopback camera device (/dev/video10).
+  # Chromium in the kiosk container then picks this up as a real webcam.
+  zoho-camera-feed:
+    build:
+      context: ./camera-feed
+      dockerfile: Dockerfile
+    container_name: zoho-camera-feed
+    restart: unless-stopped
+    environment:
+      - ESP32_CAM_IP=${ESP32_CAM_IP:-192.168.1.101}
+      - ESP32_CAM_PORT=${ESP32_CAM_PORT:-80}
+      - ESP32_CAM_STREAM_PATH=${ESP32_CAM_STREAM_PATH:-/stream}
+      - TZ=${TZ:-Asia/Kolkata}
+    # Mount the virtual camera device so ffmpeg can write to it
+    devices:
+      - /dev/video10:/dev/video10
+    networks:
+      - zoho-net
+    # Portainer labels for organization
+    labels:
+      com.zoho-kiosk.service: "camera-feed"
+      com.zoho-kiosk.description: "ESP32-CAM → virtual camera bridge (ffmpeg)"
+
+  # ─── 2. Node.js Middleware ──────────────────────────────────────────────────
+  # Receives button-press HTTP requests from the ESP32 and clicks the
+  # corresponding buttons inside the Chromium browser via Chrome DevTools Protocol.
+  zoho-middleware:
+    build:
+      context: ./middleware
+      dockerfile: Dockerfile
+    container_name: zoho-middleware
+    restart: unless-stopped
+    environment:
+      - MIDDLEWARE_PORT=${MIDDLEWARE_PORT:-3001}
+      - CDP_HOST=zoho-kiosk          # Reaches Chrome via Docker internal network
+      - CDP_PORT=${CDP_PORT:-9222}
+      - ESP32_CAM_IP=${ESP32_CAM_IP:-192.168.1.101}
+      - LOG_DIR=/var/log/zoho-kiosk
+      - TZ=${TZ:-Asia/Kolkata}
+    ports:
+      - "${MIDDLEWARE_PORT:-5003}:5003"   # Dashboard + button API + camera proxy
+    volumes:
+      - events-log:/var/log/zoho-kiosk   # Persist activity log across restarts
+    networks:
+      - zoho-net
+    depends_on:
+      - zoho-kiosk
+    labels:
+      com.zoho-kiosk.service: "middleware"
+      com.zoho-kiosk.description: "Dashboard + button bridge + camera proxy (port 3001)"
+
+  # ─── 3. Kiosk Browser ───────────────────────────────────────────────────────
+  # Runs a virtual display (Xvfb) + Google Chrome in kiosk mode pointing at
+  # the Zoho Kiosk URL. Also runs a VNC server so you can view/manage it remotely.
+  zoho-kiosk:
+    build:
+      context: ./kiosk
+      dockerfile: Dockerfile
+    container_name: zoho-kiosk
+    restart: unless-stopped
+    environment:
+      - ZOHO_KIOSK_URL=${ZOHO_KIOSK_URL:-https://people.zoho.in/YourCompany/kiosk}
+      - SCREEN_RESOLUTION=${SCREEN_RESOLUTION:-1280x800x24}
+      - CDP_PORT=${CDP_PORT:-9222}
+      - TZ=${TZ:-Asia/Kolkata}
+    ports:
+      - "${VNC_PORT:-5900}:5900"          # VNC for remote management
+      # CDP port is NOT exposed externally — middleware talks to it via internal network
+    # Mount the virtual camera so Chrome can use it as a webcam
+    devices:
+      - /dev/video10:/dev/video10
+    # Required for Xvfb and Chrome to run properly
+    shm_size: '256mb'                     # Shared memory for Chrome rendering
+    cap_add:
+      - SYS_ADMIN                         # Required for Chrome sandbox workaround
+    # Persist Chrome profile (so camera permission is saved across restarts)
+    volumes:
+      - chrome-profile:/root/.config/google-chrome
+    networks:
+      - zoho-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${CDP_PORT:-9222}/json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    labels:
+      com.zoho-kiosk.service: "kiosk"
+      com.zoho-kiosk.description: "Headless Chromium kiosk browser (Xvfb + VNC)"

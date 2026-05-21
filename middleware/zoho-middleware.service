@@ -1,0 +1,25 @@
+[Unit]
+Description=Zoho Kiosk Node.js Middleware (Button Bridge)
+After=network.target zoho-kiosk.service
+Wants=zoho-kiosk.service
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+Group=YOUR_USERNAME
+WorkingDirectory=INSTALL_DIR/middleware
+
+ExecStart=/usr/bin/node INSTALL_DIR/middleware/middleware.js
+
+Restart=always
+RestartSec=5
+
+Environment=NODE_ENV=production
+Environment=HOME=/home/YOUR_USERNAME
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=zoho-middleware
+
+[Install]
+WantedBy=multi-user.target

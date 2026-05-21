@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zoho Kiosk Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080d1a;
+      --surface:  rgba(255,255,255,0.04);
+      --surface2: rgba(255,255,255,0.08);
+      --border:   rgba(255,255,255,0.09);
+      --text:     #e2e8f0;
+      --muted:    #64748b;
+      --green:    #10b981;
+      --green-bg: rgba(16,185,129,0.12);
+      --red:      #f43f5e;
+      --red-bg:   rgba(244,63,94,0.12);
+      --blue:     #3b82f6;
+      --blue-bg:  rgba(59,130,246,0.12);
+      --amber:    #f59e0b;
+      --amber-bg: rgba(245,158,11,0.12);
+      --radius:   14px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59,130,246,0.12), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 80%,  rgba(16,185,129,0.07), transparent);
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,13,26,0.8);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6, #10b981);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .logo h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+    .logo p  { font-size: 11px; color: var(--muted); }
+
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    #live-badge {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600; color: var(--green);
+      background: var(--green-bg); padding: 5px 12px; border-radius: 20px;
+    }
+    .pulse {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.3)} }
+    #clock { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    /* ── Main layout ── */
+    main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+    /* ── Status cards ── */
+    .status-row {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px; margin-bottom: 24px;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px;
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: rgba(255,255,255,0.18); }
+    .card-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 10px; }
+    .card-value { font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+    .card-sub   { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .status-dot {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 20px;
+    }
+    .status-dot::before { content:''; width:8px; height:8px; border-radius:50%; background:currentColor; flex-shrink:0; }
+    .online  { color: var(--green); background: var(--green-bg); }
+    .offline { color: var(--red);   background: var(--red-bg);   }
+    .unknown { color: var(--amber); background: var(--amber-bg); }
+
+    /* ── Content grid ── */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .content-grid { grid-template-columns: 1fr; } }
+
+    /* ── Camera panel ── */
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+    }
+    .panel-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .panel-title svg { opacity: .6; }
+    .panel-body { padding: 16px; }
+
+    .camera-wrap {
+      width: 100%; aspect-ratio: 4/3;
+      background: #000; border-radius: 8px; overflow: hidden;
+      position: relative;
+    }
+    .camera-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .camera-offline {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; color: var(--muted); font-size: 13px;
+      background: #0a0a0a;
+    }
+    .camera-offline .icon { font-size: 36px; }
+
+    /* ── Activity log ── */
+    .log-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .log-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+
+    .filter-tabs { display: flex; gap: 6px; }
+    .tab {
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border); background: none; color: var(--muted);
+      transition: all .15s;
+    }
+    .tab.active { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+
+    .log-table-wrap { overflow-x: auto; max-height: 480px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      padding: 10px 16px; text-align: left;
+      font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px;
+      background: var(--surface2); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0;
+    }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background .15s; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 11px 16px; vertical-align: middle; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .badge-in  { background: var(--green-bg); color: var(--green); }
+    .badge-out { background: var(--blue-bg);  color: var(--blue);  }
+    .badge-err { background: var(--red-bg);   color: var(--red);   }
+
+    .time-cell { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .ip-cell   { color: var(--muted); font-family: monospace; font-size: 12px; }
+
+    .new-row { animation: slideIn .4s ease-out; }
+    @keyframes slideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+    .empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+    .empty-state p:first-child { font-size: 28px; margin-bottom: 8px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏢</div>
+    <div>
+      <h1>Kiosk Dashboard</h1>
+      <p>Zoho Check-In Monitor</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="live-badge"><div class="pulse"></div> LIVE</div>
+    <div id="clock">--:--:--</div>
+  </div>
+</header>
+
+<main>
+  <!-- Status cards -->
+  <div class="status-row">
+    <div class="card">
+      <div class="card-label">Kiosk Browser</div>
+      <div id="status-browser" class="status-dot unknown">Checking…</div>
+    </div>
+    <div class="card">
+      <div class="card-label">ESP32-CAM</div>
+      <div id="status-camera" class="status-dot unknown">Checking…</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Check-Ins Today</div>
+      <div class="card-value" id="stat-in">—</div>
+      <div class="card-sub">employees checked in</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Check-Outs Today</div>
+      <div class="card-value" id="stat-out">—</div>
+      <div class="card-sub">employees checked out</div>
+    </div>
+    <div class="card">
+      <div class="card-label">All-Time Events</div>
+      <div class="card-value" id="stat-total">—</div>
+      <div class="card-sub">in log</div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    <!-- Camera panel -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            📷 Live Camera Feed
+          </div>
+          <span id="cam-status-badge" class="status-dot unknown" style="font-size:11px;padding:2px 8px;">—</span>
+        </div>
+        <div class="panel-body">
+          <div class="camera-wrap">
+            <img id="cam-img" src="/api/camera" alt="Camera feed"
+                 onerror="showCamOffline()" onload="showCamOnline()">
+            <div class="camera-offline" id="cam-offline" style="display:none">
+              <div class="icon">📷</div>
+              <div>Camera offline</div>
+              <div style="font-size:11px;">ESP32-CAM not reachable</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;font-size:11px;color:var(--muted);text-align:center;">
+            Stream proxied from ESP32-CAM via server
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity log -->
+    <div class="log-panel">
+      <div class="log-header">
+        <div class="panel-title">📋 Activity Log</div>
+        <div class="filter-tabs">
+          <button class="tab active" onclick="setFilter('all',this)">All</button>
+          <button class="tab" onclick="setFilter('checkin',this)">Check-In</button>
+          <button class="tab" onclick="setFilter('checkout',this)">Check-Out</button>
+        </div>
+      </div>
+      <div class="log-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Date</th>
+              <th>Action</th>
+              <th>Status</th>
+              <th>Source IP</th>
+            </tr>
+          </thead>
+          <tbody id="log-body">
+            <tr><td colspan="5" class="empty-state"><p>⏳</p>Loading events…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  let allEvents  = [];
+  let filter     = 'all';
+
+  // ── Clock ──────────────────────────────────────────────────────────────────
+  function updateClock() {
+    document.getElementById('clock').textContent =
+      new Date().toLocaleTimeString('en-IN', { hour12: false });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── Camera ────────────────────────────────────────────────────────────────
+  function showCamOffline() {
+    document.getElementById('cam-offline').style.display = 'flex';
+    document.getElementById('cam-img').style.display     = 'none';
+    document.getElementById('cam-status-badge').className = 'status-dot offline';
+    document.getElementById('cam-status-badge').textContent = 'Offline';
+  }
+  function showCamOnline() {
+    document.getElementById('cam-offline').style.display = 'none';
+    document.getElementById('cam-img').style.display     = 'block';
+    document.getElementById('cam-status-badge').className = 'status-dot online';
+    document.getElementById('cam-status-badge').textContent = 'Online';
+  }
+  // Retry camera every 10s if offline
+  setInterval(() => {
+    const img = document.getElementById('cam-img');
+    if (img.style.display === 'none') {
+      img.src = '/api/camera?' + Date.now();
+    }
+  }, 10000);
+
+  // ── Status poll ───────────────────────────────────────────────────────────
+  async function pollStatus() {
+    try {
+      const s = await fetch('/api/status').then(r => r.json());
+      document.getElementById('status-browser').className = 'status-dot ' + (s.browser_ok ? 'online' : 'offline');
+      document.getElementById('status-browser').textContent = s.browser_ok ? 'Online' : 'Offline';
+      document.getElementById('status-camera').className  = 'status-dot ' + (s.camera_ok  ? 'online' : 'offline');
+      document.getElementById('status-camera').textContent = s.camera_ok  ? 'Online' : 'Offline';
+      document.getElementById('stat-in').textContent    = s.today_checkins;
+      document.getElementById('stat-out').textContent   = s.today_checkouts;
+      document.getElementById('stat-total').textContent = s.total_events;
+    } catch (_) {}
+  }
+  pollStatus();
+  setInterval(pollStatus, 12000);
+
+  // ── Event table rendering ─────────────────────────────────────────────────
+  function setFilter(f, btn) {
+    filter = f;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  }
+
+  function renderTable(newRow) {
+    const tbody   = document.getElementById('log-body');
+    const visible = filter === 'all' ? allEvents : allEvents.filter(e => e.type === filter);
+
+    if (visible.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><p>📭</p>No events yet.<br>Press a button on the kiosk!</td></tr>';
+      return;
+    }
+
+    // If we have a new row to prepend (SSE), insert it at top
+    if (newRow) {
+      const show = filter === 'all' || newRow.type === filter;
+      if (show) {
+        const tr = buildRow(newRow, true);
+        if (tbody.firstChild && tbody.firstChild.colSpan) tbody.innerHTML = '';
+        tbody.insertBefore(tr, tbody.firstChild);
+      }
+      return;
+    }
+
+    tbody.innerHTML = visible.map(e => buildRow(e, false).outerHTML).join('');
+  }
+
+  function buildRow(e, animate) {
+    const tr  = document.createElement('tr');
+    if (animate) tr.className = 'new-row';
+    const badgeClass = e.success ? (e.type === 'checkin' ? 'badge-in' : 'badge-out') : 'badge-err';
+    const badgeLabel = e.success ? (e.type === 'checkin' ? '↗ Check In' : '↙ Check Out') : '✗ Failed';
+    tr.innerHTML = `
+      <td class="time-cell">${e.time}</td>
+      <td class="time-cell">${e.date}</td>
+      <td><span class="badge ${badgeClass}">${badgeLabel}</span></td>
+      <td><span class="badge ${e.success ? 'badge-in' : 'badge-err'}">${e.success ? 'OK' : 'Error'}</span></td>
+      <td class="ip-cell">${e.source_ip || '—'}</td>`;
+    return tr;
+  }
+
+  // ── Initial event load ────────────────────────────────────────────────────
+  async function loadEvents() {
+    try {
+      allEvents = await fetch('/api/events?limit=200').then(r => r.json());
+      renderTable();
+    } catch (_) {
+      document.getElementById('log-body').innerHTML =
+        '<tr><td colspan="5" class="empty-state"><p>⚠️</p>Could not load events.</td></tr>';
+    }
+  }
+  loadEvents();
+
+  // ── Server-Sent Events (real-time new events) ─────────────────────────────
+  function connectSSE() {
+    const es = new EventSource('/api/events/stream');
+    es.onmessage = e => {
+      const evt = JSON.parse(e.data);
+      allEvents.unshift(evt);
+      renderTable(evt);
+      // Also update stats counters live
+      pollStatus();
+    };
+    es.onerror = () => { es.close(); setTimeout(connectSSE, 5000); };
+  }
+  connectSSE();
+</script>
+</body>
+</html>

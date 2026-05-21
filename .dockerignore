@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.env
+*.log
+.git
+.gitignore
+docs/
+esp32cam/
+server/
+*.md

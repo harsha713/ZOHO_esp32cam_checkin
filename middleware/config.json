@@ -1,0 +1,41 @@
+{
+  "_comment": "Edit this file to match your Zoho Kiosk setup",
+
+  "server": {
+    "port": 3001,
+    "host": "0.0.0.0"
+  },
+
+  "chrome_devtools": {
+    "host": "127.0.0.1",
+    "port": 9222
+  },
+
+  "esp32cam": {
+    "ip": "192.168.1.100",
+    "stream_port": 80,
+    "stream_path": "/stream"
+  },
+
+  "zoho_kiosk": {
+    "_comment_selectors": [
+      "These are CSS selectors for the buttons inside the Zoho Kiosk page.",
+      "You MUST inspect your Zoho Kiosk page (right-click → Inspect) to find the correct selectors.",
+      "Common ones are listed below as fallbacks — the middleware will try each in order."
+    ],
+    "checkin_selectors": [
+      "[data-action='checkin']",
+      ".checkin-button",
+      "#checkin-btn",
+      "button[title*='Check In']",
+      "button[class*='checkin']"
+    ],
+    "checkout_selectors": [
+      "[data-action='checkout']",
+      ".checkout-button",
+      "#checkout-btn",
+      "button[title*='Check Out']",
+      "button[class*='checkout']"
+    ]
+  }
+}
